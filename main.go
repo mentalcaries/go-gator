@@ -8,6 +8,10 @@ import (
 	"github.com/mentalcaries/go-gator/internal/config"
 )
 
+type state struct {
+	config *config.Config
+}
+
 func main() {
 
 	cfg, err := config.Read()
@@ -34,5 +38,8 @@ func main() {
 
     cmd := command{ name: commandArgs[1], args: commandArgs[2:] }
     
-    cmds.run(&appState, cmd)
+    err = cmds.run(&appState, cmd)
+    if err != nil{
+        log.Fatal(err)
+    }
 }
