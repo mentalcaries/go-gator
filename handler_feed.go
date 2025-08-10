@@ -34,7 +34,19 @@ func handleAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("could not save feed: %v", err)
 	}
 
-	fmt.Println("Feed created successfully:")
+    _, err = s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+        ID: uuid.New(),
+        CreatedAt: time.Now().UTC(),
+        UpdatedAt: time.Now().UTC(),
+        UserID: currentUser.ID,
+        FeedID: feed.ID,
+    })
+
+    if err != nil {
+        return fmt.Errorf("could not automatically follow feed %v", err)
+    }
+
+	fmt.Println("Feed created and followed successfully:")
 	printFeed(feed)
 	fmt.Println()
 	fmt.Println("=====================================")
@@ -68,3 +80,4 @@ func printFeed(feed database.Feed) {
 	fmt.Printf("* URL:           %s\n", feed.Url)
 	fmt.Printf("* UserID:        %s\n", feed.UserID)
 }
+
