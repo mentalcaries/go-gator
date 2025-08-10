@@ -61,3 +61,27 @@ func handlerListFeedFollows(s *state, cmd command, currentUser database.User) er
 	}
 	return nil
 }
+
+func handlerUnfollowFeed(s *state, cmd command, currentUser database.User) error {
+
+    if len(cmd.args) < 1 {
+        return fmt.Errorf("invalid arguments")
+    }
+
+    url := cmd.args[0]
+    _, err := s.db.RemoveFeedFollow(context.Background(), database.RemoveFeedFollowParams{
+        UserID: currentUser.ID,
+        Url: url,
+    })
+
+    if err != nil {
+        if errors.Is(err, sql.ErrNoRows){
+            fmt.Println("You don't follow this feed")
+            return nil
+        }
+        return  fmt.Errorf("error unfollowing feed: %v", err)
+    }
+    fmt.Println("You have unfollowed", url)
+
+    return nil
+}
