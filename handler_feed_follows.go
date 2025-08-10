@@ -11,16 +11,11 @@ import (
 	"github.com/mentalcaries/go-gator/internal/database"
 )
 
-func handleFollowFeed(s *state, cmd command) error {
+func handleFollowFeed(s *state, cmd command, currentUser database.User) error {
 	if len(cmd.args) < 1 {
 		return fmt.Errorf("invalid argument")
 	}
 	url := cmd.args[0]
-
-	currentUser, err := s.db.GetUserByName(context.Background(), s.config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("could not get user: %v", err)
-	}
 
 	existingFeedId, err := s.db.GetFeedIdByUrl(context.Background(), url)
 	if err != nil {
@@ -31,43 +26,38 @@ func handleFollowFeed(s *state, cmd command) error {
 	}
 
 	newFeedFollow, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
-        ID: uuid.New(),
-        CreatedAt: time.Now().UTC(),
-        UpdatedAt: time.Now().UTC(),
-        UserID: currentUser.ID,
-        FeedID: existingFeedId,
-    })
+		ID:        uuid.New(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID:    currentUser.ID,
+		FeedID:    existingFeedId,
+	})
 
-    if err != nil{
-        return fmt.Errorf("could not follow feed", err)
-    }
+	if err != nil {
+		return fmt.Errorf("could not follow feed", err)
+	}
 
-    fmt.Println("Feed followed:", newFeedFollow.FeedName)
-    fmt.Println("User:", newFeedFollow.UserName)
+	fmt.Println("Feed followed:", newFeedFollow.FeedName)
+	fmt.Println("User:", newFeedFollow.UserName)
 
 	return nil
 }
 
-func handlerListFeedFollows (s *state, cmd command) error {
-    
-    currentUser, err := s.db.GetUserByName(context.Background(), s.config.CurrentUserName)
-    if err!= nil {
-        return fmt.Errorf("could not get current user:  %v", err)
-    }
+func handlerListFeedFollows(s *state, cmd command, currentUser database.User) error {
 
-    followedFeeds, err := s.db.GetFeedFollowsForUser(context.Background(), currentUser.ID)
-    if err != nil {
-        return fmt.Errorf("failed to get feeds: %v", err)
-    }
+	followedFeeds, err := s.db.GetFeedFollowsForUser(context.Background(), currentUser.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get feeds: %v", err)
+	}
 
-    if len(followedFeeds) == 0 {
-        fmt.Println("No followed feeds for this user.")
-        return nil
-    }
+	if len(followedFeeds) == 0 {
+		fmt.Println("No followed feeds for this user.")
+		return nil
+	}
 
-    fmt.Println("Followed Feeds:")
-    for _, feed := range followedFeeds {
-        fmt.Println("* ", feed.Name)
-    }
-    return  nil
+	fmt.Println("Followed Feeds:")
+	for _, feed := range followedFeeds {
+		fmt.Println("* ", feed.Name)
+	}
+	return nil
 }

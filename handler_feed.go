@@ -9,17 +9,12 @@ import (
 	"github.com/mentalcaries/go-gator/internal/database"
 )
 
-func handleAddFeed(s *state, cmd command) error {
+func handleAddFeed(s *state, cmd command, currentUser database.User) error {
 	if len(cmd.args) < 2 {
 		return fmt.Errorf("invalid args")
 	}
 	name := cmd.args[0]
 	url := cmd.args[1]
-
-	currentUser, err := s.db.GetUserByName(context.Background(), s.config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("failed to get current user: %v", err)
-	}
 
 	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
 		ID:        uuid.New(),

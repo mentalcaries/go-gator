@@ -28,7 +28,7 @@ func main() {
 		config: &cfg,
 	}
 
-    db, err := sql.Open("postgres", cfg.DbUrl)
+	db, err := sql.Open("postgres", cfg.DbUrl)
 	if err != nil {
 		fmt.Println("error connecting to DB")
 		os.Exit(1)
@@ -43,12 +43,12 @@ func main() {
 	cmds.register("login", handleLogin)
 	cmds.register("register", handleRegister)
 	cmds.register("reset", handleResetUsers)
-    cmds.register("users", handleGetAllUsers)
-    cmds.register("agg", handleFetchFeed)
-    cmds.register("addfeed", handleAddFeed)
-    cmds.register("feeds", handleAllFeeds)
-    cmds.register("follow", handleFollowFeed)
-    cmds.register("following", handlerListFeedFollows)
+	cmds.register("users", handleGetAllUsers)
+	cmds.register("agg", handleFetchFeed)
+	cmds.register("addfeed", middlewareLoggedIn(handleAddFeed))
+	cmds.register("feeds", handleAllFeeds)
+	cmds.register("follow", middlewareLoggedIn(handleFollowFeed))
+	cmds.register("following", middlewareLoggedIn(handlerListFeedFollows))
 
 	commandArgs := os.Args
 	if len(commandArgs) < 2 {
@@ -62,5 +62,4 @@ func main() {
 		log.Fatal(err)
 	}
 
-	
 }
