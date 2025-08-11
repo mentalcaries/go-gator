@@ -7,9 +7,13 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mentalcaries/go-gator/internal/database"
 )
 
@@ -76,35 +80,88 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &formattedRss, nil
 }
 
+func scrapeFeeds(s *state) error {
+	feedToFetch, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return fmt.Errorf("could not fetch feed: \n%v", err)
+	}
 
-func scrapeFeeds(s *state) error{
-    feedToFetch, err := s.db.GetNextFeedToFetch(context.Background())
-    if err != nil {
-        return fmt.Errorf("could not fetch feed: \n%v", err)
-    }
+	updatedFeed, err := s.db.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{
+		ID:            feedToFetch.ID,
+		LastFetchedAt: sql.NullTime{Time: time.Now().UTC(), Valid: true},
+		UpdatedAt:     time.Now().UTC(),
+	})
 
-    updatedFeed, err := s.db.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{
-        ID: feedToFetch.ID,
-        LastFetchedAt: sql.NullTime{Time: time.Now().UTC(), Valid: true},
-        UpdatedAt: time.Now().UTC(),
-    })
+	if err != nil {
+		return fmt.Errorf("could not update last fetched at")
+	}
 
-    if err != nil {
-        return fmt.Errorf("could not update last fetched at")
-    }
+	nextFeed, err := fetchFeed(context.Background(), updatedFeed.Url)
 
-    nextFeed, err := fetchFeed(context.Background(), updatedFeed.Url)
+	if err != nil {
+		return fmt.Errorf("could not fetch next feed")
+	}
 
-    if err != nil {
-        return  fmt.Errorf("could not fetch next feed")
-    }
+	fmt.Printf("Posts from %v:\n", nextFeed.Channel.Title)
+	fmt.Printf("Adding %v posts.", len(nextFeed.Channel.Item))
 
-    fmt.Printf("Posts from %v:\n", nextFeed.Channel.Title)
-    for _, post := range nextFeed.Channel.Item {
-        fmt.Println()
-        fmt.Println(post.Title)
-        fmt.Println("===========")
-    }
-    
-    return nil
+	for _, post := range nextFeed.Channel.Item {
+
+		var publishedAt sql.NullTime
+		if post.Link != "" {
+			if t, err := time.Parse(time.RFC1123Z, post.PubDate); err == nil {
+				publishedAt = sql.NullTime{Time: t, Valid: true}
+			}
+		}
+		_, err := s.db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
+			Title:       post.Title,
+			Description: post.Description,
+			Url:         post.Link,
+			PublishedAt: publishedAt,
+			FeedID:      feedToFetch.ID,
+		})
+
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate key value") {
+				return nil
+			}
+			log.Printf("Error create post: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func handleBrowseFeed(s *state, cmd command, currentUser database.User) error {
+
+	limit := 2
+	if len(cmd.args) > 0 {
+		parsedLimit, err := strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return fmt.Errorf("invalid value")
+		}
+		limit = parsedLimit
+	}
+
+	posts, err := s.db.GetUserPosts(context.Background(), database.GetUserPostsParams{
+		UserID: currentUser.ID,
+		Limit:  int32(limit),
+	})
+
+	if err != nil {
+		return fmt.Errorf("could not get posts: %v", err)
+	}
+
+	for _, post := range posts {
+		fmt.Println(post.Title)
+		fmt.Println(post.PublishedAt)
+		fmt.Println(post.Description)
+		fmt.Println()
+		fmt.Println("========================")
+	}
+
+	return nil
 }

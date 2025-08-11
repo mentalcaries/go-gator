@@ -23,7 +23,7 @@ func handlerAgg(s *state, cmd command, currentUser database.User) error {
         fmt.Printf("Collecting feeds every %v ...\n", timeBetweenRequests)
         scrapeFeeds(s)
         fmt.Println()
-        fmt.Println("||| Next feed coming soon |||")
+        fmt.Println("Sit tight. We'll check for new posts in a bit...")
         fmt.Println()
 
     }
