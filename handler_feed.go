@@ -42,14 +42,14 @@ func handleAddFeed(s *state, cmd command, currentUser database.User) error {
     }
 
 	fmt.Println("Feed created and followed successfully:")
-	printFeed(feed)
+	printFeed(feed, currentUser)
 	fmt.Println()
 	fmt.Println("=====================================")
 
 	return nil
 }
 
-func handleAllFeeds(s *state, cmd command) error {
+func handleGetAllFeeds(s *state, cmd command) error {
 
 	feeds, err := s.db.GetFeeds(context.Background())
 	if err != nil {
@@ -67,7 +67,7 @@ func handleAllFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func printFeed(feed database.Feed) {
+func printFeed(feed database.Feed, user database.User) {
 	fmt.Printf("* ID:            %s\n", feed.ID)
 	fmt.Printf("* Created:       %v\n", feed.CreatedAt)
 	fmt.Printf("* Updated:       %v\n", feed.UpdatedAt)

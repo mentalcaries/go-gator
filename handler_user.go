@@ -81,12 +81,12 @@ func handleGetAllUsers(s *state, cmd command) error {
         fmt.Println("There are no registered users")
     }
 
-    for _, user := range allUsers {
+    for idx, user := range allUsers {
         userItem := "* " + user.Name 
         if s.config.CurrentUserName == user.Name{
             userItem += " (current)"
         }
-        fmt.Println(user)
+        fmt.Println(idx + 1,"-",user.Name)
     }
     return nil
 }

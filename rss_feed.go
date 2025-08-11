@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"html"
@@ -9,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	
+	"github.com/mentalcaries/go-gator/internal/database"
 )
 
 type RSSFeed struct {
@@ -28,7 +29,7 @@ type RSSItem struct {
 	PubDate     string `xml:"pubDate"`
 }
 
-const feedURL = "https://www.wagslane.dev/index.xml"
+// const feedURL = "https://www.wagslane.dev/index.xml"
 
 func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	client := &http.Client{
@@ -75,15 +76,35 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &formattedRss, nil
 }
 
-func handleFetchFeed(s *state, cmd command) error {
-	articles, err := fetchFeed(context.Background(), feedURL)
 
-	if err != nil {
-		return fmt.Errorf("could not get articles: %v", err)
-	}
+func scrapeFeeds(s *state) error{
+    feedToFetch, err := s.db.GetNextFeedToFetch(context.Background())
+    if err != nil {
+        return fmt.Errorf("could not fetch feed: \n%v", err)
+    }
 
-	fmt.Println(articles)
-	return nil
+    updatedFeed, err := s.db.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{
+        ID: feedToFetch.ID,
+        LastFetchedAt: sql.NullTime{Time: time.Now().UTC(), Valid: true},
+        UpdatedAt: time.Now().UTC(),
+    })
+
+    if err != nil {
+        return fmt.Errorf("could not update last fetched at")
+    }
+
+    nextFeed, err := fetchFeed(context.Background(), updatedFeed.Url)
+
+    if err != nil {
+        return  fmt.Errorf("could not fetch next feed")
+    }
+
+    fmt.Printf("Posts from %v:\n", nextFeed.Channel.Title)
+    for _, post := range nextFeed.Channel.Item {
+        fmt.Println()
+        fmt.Println(post.Title)
+        fmt.Println("===========")
+    }
+    
+    return nil
 }
-
-
